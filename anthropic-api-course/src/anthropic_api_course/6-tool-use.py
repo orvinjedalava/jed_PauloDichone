@@ -1,13 +1,20 @@
 from dotenv import load_dotenv
 from anthropic import Anthropic
+from anthropic.types import Message, MessageParam, ToolParam
+from typing import TypedDict, Literal
 import json
 
 load_dotenv()
 
 from datetime import datetime, timezone
 
+class ToolResult(TypedDict):
+    type: Literal["tool_result"]
+    tool_use_id: str
+    content: str
 
-get_current_datetime_schema = {
+
+get_current_datetime_schema: ToolParam = {
     "name": "get_current_datetime",
     "description": "Get the current date and time in a specified timezone with configurable output format. Returns datetime string, timezone, and unix timestamp.",
     "input_schema": {
@@ -70,12 +77,12 @@ def get_current_datetime(timezone_str="UTC", format="iso"):
         }
 
 
-def process_tool_calls(client, messages, response):
+def process_tool_calls(client: Anthropic, messages: list[MessageParam], response: Message) -> Message:
     """Process tool calls and return the final response"""
 
     if response.stop_reason == "tool_use":
         # Process tool calls and collect results
-        tool_results = []
+        tool_results: list[ToolResult] = []
         for content in response.content:
             if content.type == "text":
                 print(f"Claude says: {content.text}")
@@ -90,22 +97,32 @@ def process_tool_calls(client, messages, response):
 
                     # Prepare tool result for response
                     tool_results.append(
-                        {
-                            "type": "tool_result",
-                            "tool_use_id": content.id,
-                            "content": json.dumps(result),
-                        }
+                        ToolResult(
+                            type="tool_result",
+                            tool_use_id=content.id,
+                            content=json.dumps(result)
+                        )
                     )
 
         # Send tool results back to the model (OUTSIDE the loop)
         if tool_results:
             # Add assistant's response to messages
-            messages.append({"role": "assistant", "content": response.content})
+            # messages.append({"role": "assistant", "content": response.content})
+            messages.append(
+                MessageParam(
+                    role="assistant",
+                    content=response.content
+                ))
 
             # Add tool results
-            messages.append({"role": "user", "content": tool_results})
+            # messages.append({"role": "user", "content": tool_results})
+            messages.append(
+                MessageParam(
+                    role="user",
+                    content=tool_results
+                ))
 
-            followup_response = client.messages.create(
+            followup_response: Message = client.messages.create(
                 model="claude-sonnet-4-5",
                 max_tokens=1024,
                 messages=messages,
@@ -123,7 +140,7 @@ def process_tool_calls(client, messages, response):
 
 def main():
     client = Anthropic()
-    messages = []
+    messages: list[MessageParam] = []
 
     print("🕐 Interactive Time Zone Chatbot")
     print("Ask me about the current time in different places!")
@@ -132,7 +149,7 @@ def main():
 
     while True:
         # Get user input
-        user_input = input("You: ").strip()
+        user_input: str = input("You: ").strip()
 
         # Check if user wants to exit
         if user_input.lower() in ["quit", "exit", "bye"]:
@@ -149,7 +166,7 @@ def main():
         print(f"\n{'='*60}")
 
         # Get initial response from Claude
-        response = client.messages.create(
+        response: Message = client.messages.create(
             model="claude-sonnet-4-5",
             max_tokens=1024,
             messages=messages,
