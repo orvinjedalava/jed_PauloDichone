@@ -1,17 +1,17 @@
 from dotenv import load_dotenv
 from anthropic import Anthropic
 from anthropic.types import Message, MessageParam, ToolParam, ToolResultBlockParam
-# from typing import TypedDict, Literal
+from typing import TypedDict, Literal
 import json
 
 load_dotenv()
 
 from datetime import datetime, timezone
 
-# class ToolResult(TypedDict):
-#     type: Literal["tool_result"]
-#     tool_use_id: str
-#     content: str
+class DateTimeResult(TypedDict):
+    datetime: str
+    timezone: str
+    unix_timestamp: int
 
 
 get_current_datetime_schema: ToolParam = {
@@ -38,7 +38,7 @@ get_current_datetime_schema: ToolParam = {
 }
 
 
-def get_current_datetime(timezone_str="UTC", format="iso"):
+def get_current_datetime(timezone_str="UTC", format="iso") -> DateTimeResult:
     """
     Get the current date and time in specified timezone and format
     """
@@ -107,7 +107,6 @@ def process_tool_calls(client: Anthropic, messages: list[MessageParam], response
         # Send tool results back to the model (OUTSIDE the loop)
         if tool_results:
             # Add assistant's response to messages
-            # messages.append({"role": "assistant", "content": response.content})
             messages.append(
                 MessageParam(
                     role="assistant",
@@ -115,7 +114,6 @@ def process_tool_calls(client: Anthropic, messages: list[MessageParam], response
                 ))
 
             # Add tool results
-            # messages.append({"role": "user", "content": tool_results})
             messages.append(
                 MessageParam(
                     role="user",
