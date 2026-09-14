@@ -1,17 +1,17 @@
 from dotenv import load_dotenv
 from anthropic import Anthropic
-from anthropic.types import Message, MessageParam, ToolParam
-from typing import TypedDict, Literal
+from anthropic.types import Message, MessageParam, ToolParam, ToolResultBlockParam
+# from typing import TypedDict, Literal
 import json
 
 load_dotenv()
 
 from datetime import datetime, timezone
 
-class ToolResult(TypedDict):
-    type: Literal["tool_result"]
-    tool_use_id: str
-    content: str
+# class ToolResult(TypedDict):
+#     type: Literal["tool_result"]
+#     tool_use_id: str
+#     content: str
 
 
 get_current_datetime_schema: ToolParam = {
@@ -82,7 +82,7 @@ def process_tool_calls(client: Anthropic, messages: list[MessageParam], response
 
     if response.stop_reason == "tool_use":
         # Process tool calls and collect results
-        tool_results: list[ToolResult] = []
+        tool_results: list[ToolResultBlockParam] = []
         for content in response.content:
             if content.type == "text":
                 print(f"Claude says: {content.text}")
@@ -97,7 +97,7 @@ def process_tool_calls(client: Anthropic, messages: list[MessageParam], response
 
                     # Prepare tool result for response
                     tool_results.append(
-                        ToolResult(
+                        ToolResultBlockParam(
                             type="tool_result",
                             tool_use_id=content.id,
                             content=json.dumps(result)
